@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">PopularMovies</string>
+
+    <string name="error_message_detail">Error getting movie data</string>
+    <string name="movie_key">movie</string>
+    <string name="settings">Settings</string>
+
+    <string name="settings_order_by_popularity_label">Popular</string>
+    <string name="settings_order_by_highest_rated_label">Top Rated</string>
+
+    <string name="no_movies_loaded">No Movies Loaded.</string>
+    <string name="no_internet_connection">No Internet Connection</string>
+
+</resources>
+
