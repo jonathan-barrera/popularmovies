@@ -20,6 +20,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.example.android.popularmovies.Model.Movie;
+import com.example.android.popularmovies.data.FavoritesContract;
 
 import java.util.List;
 
@@ -36,7 +37,7 @@ public class MainActivity extends AppCompatActivity
     private static final String POPULAR_PATH_KEY = "Popular";
     private static final String TOP_RATED_PATH_KEY = "Top Rated";
     private static final int SPINNER_POPULAR_INDEX = 0;
-    private static final int SPINNGER_TOP_RATED_INDEX = 1;
+    private static final int SPINNER_TOP_RATED_INDEX = 1;
 
     // Declare member variables
     @BindView(R.id.recycler_view_movies)
@@ -105,7 +106,8 @@ public class MainActivity extends AppCompatActivity
     public void onClick(Movie movie) {
         // Send an intent to open the DetailActivity.class using the selected movie as a parameter
         Intent intent = new Intent(this, DetailActivity.class);
-        intent.putExtra(getString(R.string.movie_key), movie);
+        intent.putExtra(FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID,
+                movie.getMovieDatabaseID());
 
         startActivity(intent);
     }
@@ -126,7 +128,7 @@ public class MainActivity extends AppCompatActivity
         if (mPreference.equals(POPULAR_PATH_KEY)) {
             spinner.setSelection(SPINNER_POPULAR_INDEX);
         } else if (mPreference.equals(TOP_RATED_PATH_KEY)) {
-            spinner.setSelection(SPINNGER_TOP_RATED_INDEX);
+            spinner.setSelection(SPINNER_TOP_RATED_INDEX);
         }
 
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {

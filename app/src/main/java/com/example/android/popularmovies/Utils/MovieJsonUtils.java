@@ -25,10 +25,7 @@ public class MovieJsonUtils {
     public static List<Movie> extractMovies(String jsonResponseString) throws JSONException {
         // final strings for JSON keys
         final String JSON_KEY_RESULTS = "results";
-        final String JSON_KEY_TITLE = "title";
-        final String JSON_KEY_RATING = "vote_average";
-        final String JSON_KEY_SYNOPSIS = "overview";
-        final String JSON_KEY_RELEASE_DATE = "release_date";
+        final String JSON_KEY_DATABASE_ID = "id";
         final String JSON_KEY_IMAGE_LINK = "poster_path";
 
         final String JSON_KEY_STATUS_MESSAGE = "status_message";
@@ -52,14 +49,11 @@ public class MovieJsonUtils {
             JSONObject currentMovieData = movieResults.getJSONObject(i);
 
             // Extract all the relevant information from the movie jsonobject
-            String title = currentMovieData.optString(JSON_KEY_TITLE);
-            float rating = (float) currentMovieData.optDouble(JSON_KEY_RATING);
-            String synopsis = currentMovieData.optString(JSON_KEY_SYNOPSIS);
-            String releaseDate = currentMovieData.optString(JSON_KEY_RELEASE_DATE);
+            String movieDatabaseId = String.valueOf(currentMovieData.optInt(JSON_KEY_DATABASE_ID));
             String imageLink = currentMovieData.optString(JSON_KEY_IMAGE_LINK);
 
             // Create new Movie object with the above information
-            Movie currentMovie = new Movie(title, imageLink, synopsis, rating, releaseDate);
+            Movie currentMovie = new Movie(movieDatabaseId, imageLink);
 
             // Add to movies list
             moviesList.add(currentMovie);

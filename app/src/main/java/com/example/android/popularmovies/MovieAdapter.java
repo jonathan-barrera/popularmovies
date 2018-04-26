@@ -53,12 +53,12 @@ public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieAdapter
     @Override
     public void onBindViewHolder(MovieAdapter.MovieAdapterViewHolder holder, int position) {
         Movie currentMovie = mMovieData.get(position);
-        String imageLinkPath = currentMovie.getImageLink();
+        String posterLinkPath = currentMovie.getPosterLink();
         Context context = holder.mMoviePosterIV.getContext();
 
         // Use Picasso to get the movie poster Image
         Picasso.with(context)
-                .load(BASE_URL + imageLinkPath)
+                .load(BASE_URL + posterLinkPath)
                 .into(holder.mMoviePosterIV);
     }
 

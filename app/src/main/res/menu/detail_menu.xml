@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:title="@string/favorite"
+        android:id="@+id/favorite_option"
+        android:background="@color/colorPrimaryDark"
+        app:showAsAction="ifRoom"/>
+
+    <item
+        android:title="@string/unfavorite"
+        android:id="@+id/unfavorite_option"
+        android:background="@color/colorPrimaryDark"
+        app:showAsAction="ifRoom"
+        android:visible="false"
+        />
+
+</menu>
