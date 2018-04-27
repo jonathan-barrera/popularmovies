@@ -33,6 +33,7 @@ public class DetailMovieJsonUtils {
         final String JSON_KEY_TRAILER_LINK = "key";
         final String JSON_KEY_REVIEWS = "reviews";
         final String JSON_KEY_REVIEW_CONTENT = "content";
+        final String JSON_KEY_REVIEW_AUTHOR = "author";
         final String JSON_KEY_DATABASE_ID = "id";
         final String JSON_KEY_POSTER_LINK = "poster_path";
 
@@ -56,33 +57,46 @@ public class DetailMovieJsonUtils {
         String databaseId = String.valueOf(currentMovieData.optInt(JSON_KEY_DATABASE_ID));
         String posterLink = currentMovieData.optString(JSON_KEY_POSTER_LINK);
 
-        // Extract the trailer link information for this movie (if it exists)
+        // Extract the trailer links for this movie (if they exist)
         JSONObject currentMovieTrailers = currentMovieData.optJSONObject(JSON_KEY_VIDEOS);
         JSONArray trailerResults = currentMovieTrailers.optJSONArray(JSON_KEY_RESULTS);
-        String trailerLink;
+        String[] trailerLinks;
         if (trailerResults.length() > 0) {
-            trailerLink = trailerResults.optJSONObject(0).optString(JSON_KEY_TRAILER_LINK);
+            trailerLinks = new String[trailerResults.length()];
+            for (int i = 0; i < trailerResults.length(); i++) {
+                String currentTrailerLink = trailerResults.optJSONObject(i)
+                        .optString(JSON_KEY_TRAILER_LINK);
+                trailerLinks[i] = currentTrailerLink;
+            }
         } else {
-            trailerLink = "";
+            trailerLinks = new String[0];
         }
 
-        // Extract the reviews for this movie (if they exist)
+        // Extract the reviews and review authors for this movie (if they exist)
         JSONObject currentMovieReviews = currentMovieData.optJSONObject(JSON_KEY_REVIEWS);
         JSONArray reviewsResults = currentMovieReviews.optJSONArray(JSON_KEY_RESULTS);
         String[] reviews;
+        String[] reviewAuthors;
         if (reviewsResults.length() > 0) {
+            // String array to store review content
             reviews = new String[reviewsResults.length()];
+            // String array to store review author names
+            reviewAuthors = new String[reviewsResults.length()];
+            // Loop through all reviews to get info and store in arrays
             for (int i = 0; i < reviewsResults.length(); i++) {
-                String currentReview = reviewsResults.optJSONObject(i)
-                        .optString(JSON_KEY_REVIEW_CONTENT);
-                reviews[i] = currentReview;
+                JSONObject currentReview = reviewsResults.optJSONObject(i);
+                String reviewContent = currentReview.optString(JSON_KEY_REVIEW_CONTENT);
+                String reviewAuthor = currentReview.optString(JSON_KEY_REVIEW_AUTHOR);
+                reviews[i] = reviewContent;
+                reviewAuthors[i] = reviewAuthor;
             }
         } else {
             reviews = new String[0];
+            reviewAuthors = new String[0];
         }
 
         // Create new Movie object with the above information and return
         return new DetailMovie(title, synopsis, rating, releaseDate,
-                backdropLink, trailerLink, reviews, databaseId, posterLink);
+                backdropLink, trailerLinks, reviews, reviewAuthors, databaseId, posterLink);
     }
 }

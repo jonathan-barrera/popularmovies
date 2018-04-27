@@ -5,4 +5,10 @@
         <item>@string/settings_order_by_highest_rated_label</item>
         <item>@string/settings_order_by_favorites</item>
     </string-array>
+
+    <integer-array name="detail_trailer_views">
+        <item>@id/detail_trailer_number_one</item>
+        <item>@id/detail_trailer_number_two</item>
+        <item>@id/detail_trailer_number_three</item>
+    </integer-array>
 </resources>

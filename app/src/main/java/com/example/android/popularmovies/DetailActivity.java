@@ -1,5 +1,6 @@
 package com.example.android.popularmovies;
 
+import android.content.ActivityNotFoundException;
 import android.support.v4.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -7,16 +8,26 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.ImageView;
+import android.widget.ListAdapter;
+import android.widget.ListView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.android.popularmovies.Model.DetailMovie;
+import com.example.android.popularmovies.Model.Review;
 import com.example.android.popularmovies.data.FavoritesContract;
 import com.squareup.picasso.Picasso;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -25,6 +36,9 @@ public class DetailActivity extends AppCompatActivity
         implements LoaderManager.LoaderCallbacks<DetailMovie> {
 
     private static final String BASE_URL = "https://image.tmdb.org/t/p/w500/";
+    private static final int DETAIL_LOADER_ID = 2;
+    private static final String YOUTUBE_WEB_BASE = "https://www.youtube.com/watch?v=";
+    private static final String YOUTUBE_APP_BASE = "vnd.youtube:";
 
     private static boolean isAlreadyFavorite = false;
 
@@ -39,6 +53,10 @@ public class DetailActivity extends AppCompatActivity
     TextView mDetailReleaseDateView;
     @BindView(R.id.detail_synopsis_text_view)
     TextView mDetailSynopsisView;
+    @BindView(R.id.no_trailers_found_text_view)
+    TextView mNoTrailersFound;
+    @BindView(R.id.no_reviews_found_text_view)
+    TextView mNoReviewsFound;
 
     private String mMovieDatabaseId;
     private DetailMovie mDetailMovie;
@@ -70,7 +88,7 @@ public class DetailActivity extends AppCompatActivity
         }
 
         LoaderManager loaderManager = getSupportLoaderManager();
-        loaderManager.initLoader(2, null, this);
+        loaderManager.initLoader(DETAIL_LOADER_ID, null, this);
     }
 
     private void closeOnError() {
@@ -174,6 +192,9 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<DetailMovie> loader, DetailMovie data) {
+        // Set the data to the mDetailMenu variable
+        mDetailMovie = data;
+
         // Set the title
         setTitle(data.getMovieTitle());
 
@@ -185,13 +206,112 @@ public class DetailActivity extends AppCompatActivity
         mDetailReleaseDateView.setText(data.getReleaseDate());
         mDetailSynopsisView.setText(data.getSynopsis());
 
-        mDetailMovie = data;
+        //TODO Set the trailers and reviews information for the movie
+        // Get the number of trailers and the links
+        String[] trailerLinks = data.getTrailerLinks();
+        int numTrailers = trailerLinks.length;
 
-        // Check to see if the current movie is already included in the user's favorites
-        checkFavoriteStatus();
+        // If there are no trailers, skip the following steps and leave the No Trailers Found
+        // textview visible.
+        if (numTrailers > 0) {
+            // Set the No Trailers Found view to GONE
+            mNoTrailersFound.setVisibility(View.GONE);
+            // Create a list of resource ids referencing the layouts and textviews
+            int[] trailerViewResourceIds = new int[]{
+                    R.id.detail_trailer_number_one,
+                    R.id.trailer_index_text_view_one,
+                    R.id.detail_trailer_number_two,
+                    R.id.trailer_index_text_view_two,
+                    R.id.detail_trailer_number_three,
+                    R.id.trailer_index_text_view_three};
 
-        // Rebuild the optionsMenu to makes sure the correct Favorite/Unfavorite action is showing
-        invalidateOptionsMenu();
+            // Populate the views with the trailer information. Only up to a maximum of 3 trailers.
+            for (int i = 0; i < 3 && i < numTrailers; i++) {
+                // Get references to the views
+                View view = findViewById(trailerViewResourceIds[2 * i]);
+                TextView textView = findViewById(trailerViewResourceIds[2 * i + 1]);
+
+                // Get the trailer count text
+                String trailerCount = getString(R.string.watch_trailer) + (i + 1);
+
+                // Set the view to visible
+                view.setVisibility(View.VISIBLE);
+
+                // Set the trailer count text to the textview
+                textView.setText(trailerCount);
+
+                // Set the Youtube link information to the view in a tag
+                view.setTag(trailerLinks[i]);
+
+                // Set on click listener to the textview in order to send intent
+                // to take user to watch the trailer
+                view.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        openYoutubeIntent(view);
+                    }
+                });
+            }
+        }
+
+        // Get the numbers of reviews
+        int numReviews = data.getReviews().length;
+        Log.d("DetailActivity.java", "number of reviews: " + numReviews);
+
+        // If there are no reviews, skip the following steps and leave the No Reviews Found
+        // textview visible
+        if (numReviews > 0) {
+            // Get the Array of Strings for the review content and authors
+            String[] reviews = data.getReviews();
+            String[] authors = data.getReviewAuthors();
+            // Set the No Reviews Found view to GONE
+            mNoReviewsFound.setVisibility(View.GONE);
+            // Create a list of resource ids referencing the layouts and textviews
+            int[] reviewsViewResourceIds = new int[]{
+                    R.id.detail_review_one,
+                    R.id.review_content_text_view_one,
+                    R.id.review_author_text_view_one,
+                    R.id.detail_review_two,
+                    R.id.review_content_text_view_two,
+                    R.id.review_author_text_view_two,
+                    R.id.detail_review_three,
+                    R.id.review_content_text_view_three,
+                    R.id.review_author_text_view_three};
+
+            // Populate the views with the review information. Only up to a maximum of 3 reviews.
+            for (int i = 0; i < 3 && i < numReviews; i++) {
+                // Get references to the views
+                View view = findViewById(reviewsViewResourceIds[3 * i]);
+                TextView contentTextView = findViewById(reviewsViewResourceIds[3 * i + 1]);
+                TextView authorTextView = findViewById(reviewsViewResourceIds[3 * i + 2]);
+
+                // Set the view to visible
+                view.setVisibility(View.VISIBLE);
+
+                // Set the review content to the textview
+                contentTextView.setText(reviews[i]);
+                authorTextView.setText(authors[i]);
+            }
+
+            // Check to see if the current movie is already included in the user's favorites
+            checkFavoriteStatus();
+
+            // Rebuild the optionsMenu to makes sure the correct Favorite/Unfavorite action is showing
+            invalidateOptionsMenu();
+        }
+    }
+
+    private void openYoutubeIntent(View view) {
+        String youtubePath = (String) view.getTag();
+        Intent youtubeAppIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(YOUTUBE_APP_BASE +
+                youtubePath));
+        Intent youtubeWebIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(YOUTUBE_WEB_BASE +
+                youtubePath));
+        try {
+            startActivity(youtubeAppIntent);
+        } catch (ActivityNotFoundException e) {
+            startActivity(youtubeWebIntent);
+        }
     }
 
     @Override
@@ -200,7 +320,9 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
-        mCursor.close();
+        if (mCursor != null) {
+            mCursor.close();
+        }
         super.onStop();
     }
 }

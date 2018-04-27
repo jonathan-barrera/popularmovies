@@ -22,10 +22,13 @@ public class DetailMovie {
     private String mBackdropLink;
 
     // Trailer video link
-    private String mTrailerLink;
+    private String[] mTrailerLinks;
 
     // Reviews
     private String[] mReviews;
+
+    // Review Authors
+    private String[] mReviewAuthors;
 
     // TMDb ID
     private String mMovieDatabaseID;
@@ -35,15 +38,17 @@ public class DetailMovie {
 
     // Pass in the movie information into the constructor
     public DetailMovie (String title, String synopsis, float rating,
-                  String releaseDate, String backdropLink, String trailerLink,
-                  String[] reviews, String movieDatabaseID, String posterLink){
+                  String releaseDate, String backdropLink, String[] trailerLinks,
+                  String[] reviews, String[] reviewAuthors, String movieDatabaseID,
+                        String posterLink){
         mTitle = title;
         mSynopsis = synopsis;
         mRating = rating;
         mReleaseDate = releaseDate;
         mBackdropLink = backdropLink;
-        mTrailerLink = trailerLink;
+        mTrailerLinks = trailerLinks;
         mReviews = reviews;
+        mReviewAuthors = reviewAuthors;
         mMovieDatabaseID = movieDatabaseID;
         mPosterLink = posterLink;
     }
@@ -67,9 +72,11 @@ public class DetailMovie {
 
     public String getBackdropLink() { return mBackdropLink; }
 
-    public String getTrailerLink() { return mTrailerLink; }
+    public String[] getTrailerLinks() { return mTrailerLinks; }
 
     public String[] getReviews() { return mReviews; }
+
+    public String[] getReviewAuthors() { return mReviewAuthors; }
 
     public String getMovieDatabaseID() { return mMovieDatabaseID; }
 

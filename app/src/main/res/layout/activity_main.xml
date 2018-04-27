@@ -7,7 +7,7 @@
         android:id="@+id/recycler_view_movies"
         android:padding="16dp"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent" />
 
     <ProgressBar
         android:id="@+id/progress_bar"
