@@ -7,10 +7,11 @@
 
     <string name="settings_order_by_popularity_label">Popular</string>
     <string name="settings_order_by_highest_rated_label">Top Rated</string>
+    <string name="settings_order_by_favorites">Favorites</string>
 
     <string name="no_movies_loaded">No Movies Loaded.</string>
     <string name="no_internet_connection">No Internet Connection</string>
-    <string name="favorite">Favorite</string>
+    <string name="favorite">Add Favorite</string>
     <string name="unfavorite">Unfavorite</string>
 
 </resources>

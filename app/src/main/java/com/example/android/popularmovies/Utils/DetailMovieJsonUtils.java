@@ -34,6 +34,7 @@ public class DetailMovieJsonUtils {
         final String JSON_KEY_REVIEWS = "reviews";
         final String JSON_KEY_REVIEW_CONTENT = "content";
         final String JSON_KEY_DATABASE_ID = "id";
+        final String JSON_KEY_POSTER_LINK = "poster_path";
 
         final String JSON_KEY_STATUS_MESSAGE = "status_message";
 
@@ -53,6 +54,7 @@ public class DetailMovieJsonUtils {
         String releaseDate = currentMovieData.optString(JSON_KEY_RELEASE_DATE);
         String backdropLink = currentMovieData.optString(JSON_KEY_BACKDROP_LINK);
         String databaseId = String.valueOf(currentMovieData.optInt(JSON_KEY_DATABASE_ID));
+        String posterLink = currentMovieData.optString(JSON_KEY_POSTER_LINK);
 
         // Extract the trailer link information for this movie (if it exists)
         JSONObject currentMovieTrailers = currentMovieData.optJSONObject(JSON_KEY_VIDEOS);
@@ -81,6 +83,6 @@ public class DetailMovieJsonUtils {
 
         // Create new Movie object with the above information and return
         return new DetailMovie(title, synopsis, rating, releaseDate,
-                backdropLink, trailerLink, reviews, databaseId);
+                backdropLink, trailerLink, reviews, databaseId, posterLink);
     }
 }

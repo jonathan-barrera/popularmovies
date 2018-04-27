@@ -3,5 +3,6 @@
     <string-array name="settings_order_by_labels">
         <item>@string/settings_order_by_popularity_label</item>
         <item>@string/settings_order_by_highest_rated_label</item>
+        <item>@string/settings_order_by_favorites</item>
     </string-array>
 </resources>

@@ -142,6 +142,8 @@ public class DetailActivity extends AppCompatActivity
                 mDetailMovie.getMovieDatabaseID());
         movieValues.put(FavoritesContract.FavoritesEntry.COLUMN_TITLE,
                 mDetailMovie.getMovieTitle());
+        movieValues.put(FavoritesContract.FavoritesEntry.COLUMN_POSTER_LINK,
+                mDetailMovie.getPosterLink());
 
         getContentResolver().insert(FavoritesContract.FavoritesEntry.CONTENT_URI, movieValues);
     }
@@ -185,7 +187,10 @@ public class DetailActivity extends AppCompatActivity
 
         mDetailMovie = data;
 
+        // Check to see if the current movie is already included in the user's favorites
         checkFavoriteStatus();
+
+        // Rebuild the optionsMenu to makes sure the correct Favorite/Unfavorite action is showing
         invalidateOptionsMenu();
     }
 

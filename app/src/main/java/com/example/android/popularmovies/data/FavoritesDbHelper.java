@@ -28,7 +28,8 @@ public class FavoritesDbHelper extends SQLiteOpenHelper {
                 FavoritesContract.FavoritesEntry.TABLE_NAME + " (" +
                 FavoritesContract.FavoritesEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 FavoritesContract.FavoritesEntry.COLUMN_TITLE + " TEXT NOT NULL, " +
-                FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID + " INTEGER NOT NULL);";
+                FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID + " INTEGER NOT NULL, " +
+                FavoritesContract.FavoritesEntry.COLUMN_POSTER_LINK + " TEXT NOT NULL);";
 
         sqLiteDatabase.execSQL(SQL_CREATE_FAVORITES_DB);
 

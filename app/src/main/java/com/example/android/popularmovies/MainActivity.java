@@ -1,5 +1,6 @@
 package com.example.android.popularmovies;
 
+import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.support.v4.app.LoaderManager;
@@ -10,6 +11,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -22,6 +24,7 @@ import android.widget.TextView;
 import com.example.android.popularmovies.Model.Movie;
 import com.example.android.popularmovies.data.FavoritesContract;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
@@ -36,8 +39,12 @@ public class MainActivity extends AppCompatActivity
     private static final String SHARED_PREFERENCE_KEY = "order_preference";
     private static final String POPULAR_PATH_KEY = "Popular";
     private static final String TOP_RATED_PATH_KEY = "Top Rated";
+    private static final String FAVORITES_KEY = "Favorites";
     private static final int SPINNER_POPULAR_INDEX = 0;
     private static final int SPINNER_TOP_RATED_INDEX = 1;
+    private static final int SPINNER_FAVORITES_INDEX = 2;
+
+    private static final int POP_TOP_RATED_LOADER_ID = 123;
 
     // Declare member variables
     @BindView(R.id.recycler_view_movies)
@@ -74,10 +81,25 @@ public class MainActivity extends AppCompatActivity
         // Initialize mMovieAdapter and set it to the recycler view
         mMovieAdapter = new MovieAdapter(this);
         mMoviesRecyclerView.setAdapter(mMovieAdapter);
+    }
+
+    @Override
+    protected void onResume() {
+        /** Must destroy the loader in order to show the Favorites list. I came up with
+        // this solution after many tries to fix the problem, but I do not understand
+        // know I must do this. Can the reviewer please give me some feedback? **/
+        LoaderManager loaderManager = getSupportLoaderManager();
+        loaderManager.destroyLoader(POP_TOP_RATED_LOADER_ID);
 
         // Get a reference to the LoaderManager and initialize it
-        LoaderManager loaderManager = getSupportLoaderManager();
-        loaderManager.initLoader(1, null, this);
+        switch (mPreference) {
+            case FAVORITES_KEY:
+                setFavoritesListToUI();
+                break;
+            default:
+                loaderManager.initLoader(POP_TOP_RATED_LOADER_ID, null, this);
+        }
+        super.onResume();
     }
 
     // Method for checking network connectivity. If there is a problem with the connect,
@@ -125,17 +147,26 @@ public class MainActivity extends AppCompatActivity
 
         spinner.setAdapter(adapter);
 
-        if (mPreference.equals(POPULAR_PATH_KEY)) {
-            spinner.setSelection(SPINNER_POPULAR_INDEX);
-        } else if (mPreference.equals(TOP_RATED_PATH_KEY)) {
-            spinner.setSelection(SPINNER_TOP_RATED_INDEX);
+        Log.d("MainActivity.java", "onCreateOptionsMenu mPreference:" + mPreference);
+
+        switch (mPreference) {
+            case TOP_RATED_PATH_KEY:
+                spinner.setSelection(SPINNER_TOP_RATED_INDEX);
+                break;
+            case FAVORITES_KEY:
+                spinner.setSelection(SPINNER_FAVORITES_INDEX);
+                break;
+            default:
+                spinner.setSelection(SPINNER_POPULAR_INDEX);
         }
+
 
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l) {
+
                 // Get the selected item
-                String selectedItem = adapterView.getItemAtPosition(i).toString();
+                String selectedItem = adapterView.getItemAtPosition(position).toString();
 
                 if (selectedItem != null && !selectedItem.isEmpty()) {
                     mPreference = selectedItem;
@@ -144,12 +175,18 @@ public class MainActivity extends AppCompatActivity
                     SharedPreferences.Editor editor = mSharedPref.edit();
                     editor.putString(SHARED_PREFERENCE_KEY, selectedItem);
                     editor.apply();
-                } else {
-                    return;
-                }
 
-                mMovieAdapter.setMovieData(null);
-                getSupportLoaderManager().restartLoader(1, null, MainActivity.this);
+                    // Clear previous movie adapter
+                    mMovieAdapter.setMovieData(null);
+
+                    if (selectedItem.equals(getString(R.string.settings_order_by_favorites))) {
+                        setFavoritesListToUI();
+                    } else {
+                        // Restart Loader
+                        getSupportLoaderManager().restartLoader(POP_TOP_RATED_LOADER_ID, null,
+                                MainActivity.this);
+                    }
+                }
             }
 
             @Override
@@ -184,5 +221,48 @@ public class MainActivity extends AppCompatActivity
     @Override
     public void onLoaderReset(android.support.v4.content.Loader<List<Movie>> loader) {
         mMovieAdapter.setMovieData(null);
+    }
+
+    private void setFavoritesListToUI() {
+        // Query the favorite movies from the database
+        List<Movie> favoriteMovies = getListOfFavoriteMovies();
+
+        // Set the loading indicator to gone
+        mProgressBar.setVisibility(View.GONE);
+
+        // Use the information from the database to populate the UI
+        mMovieAdapter.setMovieData(favoriteMovies);
+    }
+
+    private List<Movie> getListOfFavoriteMovies() {
+        Cursor cursor = getContentResolver().query(
+                FavoritesContract.FavoritesEntry.CONTENT_URI,
+                null,
+                null,
+                null,
+                null
+        );
+
+        // return null if cursor is null
+        if (cursor == null) {
+            return null;
+        }
+
+        // Declare and initialize List of favorite movies
+        List<Movie> favoriteMovies = new ArrayList<>();
+
+        // Iterate through cursor to get the information to make Movie objects to put into the
+        // the list
+        for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
+            String movieDatabaseId = cursor.getString(cursor.getColumnIndex(
+                    FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID));
+            String posterLink = cursor.getString(cursor.getColumnIndex(
+                    FavoritesContract.FavoritesEntry.COLUMN_POSTER_LINK));
+
+            Movie currentMovie = new Movie(movieDatabaseId, posterLink);
+            favoriteMovies.add(currentMovie);
+        }
+
+        return favoriteMovies;
     }
 }
