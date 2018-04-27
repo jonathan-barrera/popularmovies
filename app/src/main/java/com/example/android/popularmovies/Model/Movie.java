@@ -1,10 +1,5 @@
 package com.example.android.popularmovies.Model;
 
-import android.os.Parcel;
-import android.os.Parcelable;
-
-import java.io.Serializable;
-
 /**
  * Created by jonathanbarrera on 4/12/18.
  * Movie object contains information about the poster image and MovieDatabase ID for a movie

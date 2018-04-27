@@ -4,19 +4,16 @@ import android.content.Context;
 import android.support.v4.content.AsyncTaskLoader;
 
 import com.example.android.popularmovies.Model.DetailMovie;
-import com.example.android.popularmovies.Model.Movie;
 import com.example.android.popularmovies.Utils.DetailMovieJsonUtils;
 import com.example.android.popularmovies.Utils.DetailNetworkUtils;
-import com.example.android.popularmovies.Utils.MovieJsonUtils;
-import com.example.android.popularmovies.Utils.NetworkUtils;
 
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Created by jonathanbarrera on 4/25/18.
+ * Loader for DetailgitMovie object
  */
 
 public class DetailMovieLoader extends AsyncTaskLoader<DetailMovie> {

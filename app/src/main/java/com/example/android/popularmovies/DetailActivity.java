@@ -12,22 +12,14 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ArrayAdapter;
 import android.widget.ImageView;
-import android.widget.ListAdapter;
-import android.widget.ListView;
 import android.widget.RatingBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.android.popularmovies.Model.DetailMovie;
-import com.example.android.popularmovies.Model.Review;
 import com.example.android.popularmovies.data.FavoritesContract;
 import com.squareup.picasso.Picasso;
-
-import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -206,7 +198,6 @@ public class DetailActivity extends AppCompatActivity
         mDetailReleaseDateView.setText(data.getReleaseDate());
         mDetailSynopsisView.setText(data.getSynopsis());
 
-        //TODO Set the trailers and reviews information for the movie
         // Get the number of trailers and the links
         String[] trailerLinks = data.getTrailerLinks();
         int numTrailers = trailerLinks.length;

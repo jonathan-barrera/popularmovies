@@ -1,14 +1,10 @@
 package com.example.android.popularmovies.Utils;
 
 import com.example.android.popularmovies.Model.DetailMovie;
-import com.example.android.popularmovies.Model.Movie;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Created by jonathanbarrera on 4/25/18.

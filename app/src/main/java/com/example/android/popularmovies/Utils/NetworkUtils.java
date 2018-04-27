@@ -1,7 +1,5 @@
 package com.example.android.popularmovies.Utils;
 
-import android.util.Log;
-
 import com.example.android.popularmovies.BuildConfig;
 import com.squareup.okhttp.HttpUrl;
 import com.squareup.okhttp.OkHttpClient;
