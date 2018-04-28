@@ -338,9 +338,10 @@ public class DetailActivity extends AppCompatActivity
                 youtubePath));
         Intent youtubeWebIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(YOUTUBE_WEB_BASE +
                 youtubePath));
-        try {
+
+        if (youtubeAppIntent.resolveActivity(getPackageManager()) != null) {
             startActivity(youtubeAppIntent);
-        } catch (ActivityNotFoundException e) {
+        } else {
             startActivity(youtubeWebIntent);
         }
     }

@@ -1,5 +1,6 @@
 package com.example.android.popularmovies;
 
+import android.content.CursorLoader;
 import android.content.res.Configuration;
 import android.database.ContentObserver;
 import android.database.Cursor;
@@ -21,6 +22,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -36,7 +38,7 @@ import butterknife.ButterKnife;
 
 public class MainActivity extends AppCompatActivity
         implements MovieAdapter.MovieAdapterOnClickHandler,
-        LoaderManager.LoaderCallbacks<List<Movie>> {
+        LoaderManager.LoaderCallbacks<List<Movie>>{
 
     // Keys used for list order preference
     private static final String SHARED_PREFERENCE_FILE = "shared_preferences";
@@ -66,6 +68,8 @@ public class MainActivity extends AppCompatActivity
     TextView mEmptyTextView;
     @BindView(R.id.progress_bar)
     ProgressBar mProgressBar;
+    @BindView(R.id.reload_button)
+    Button mReloadButton;
     private MovieAdapter mMovieAdapter;
 
     // Use mPreference to keep track of the User's preference. Default is "Popular"
@@ -75,7 +79,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(LOG_TAG, "oncreate called");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -136,6 +139,7 @@ public class MainActivity extends AppCompatActivity
 
         if (!mIsConnected) {
             mEmptyTextView.setText(R.string.no_internet_connection);
+            mReloadButton.setVisibility(View.VISIBLE);
         } else if (mPreference.equals(FAVORITES_KEY)) {
             mEmptyTextView.setText(R.string.no_favorite_movies);
         } else {
@@ -143,7 +147,20 @@ public class MainActivity extends AppCompatActivity
         }
     }
 
+    public void tryReloading(View view) {
+        if (mPreference.equals(getString(R.string.settings_order_by_favorites))) {
+            hideEmptyTextView();
+            mProgressBar.setVisibility(View.VISIBLE);
+            setFavoritesListToUI();
+        } else {
+            // Restart Loader
+            getSupportLoaderManager().restartLoader(POP_TOP_RATED_LOADER_ID, null,
+                    MainActivity.this);
+        }
+    }
+
     private void hideEmptyTextView() {
+        mReloadButton.setVisibility(View.GONE);
         mMoviesRecyclerView.setVisibility(View.VISIBLE);
         mEmptyTextView.setVisibility(View.GONE);
     }
@@ -230,12 +247,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<List<Movie>> loader, List<Movie> data) {
-        Log.d(LOG_TAG, "onloadfinished called");
-        // For some reason, onLoadFinished is called AGAIN after onResume when returning to this
-        // activity, even though onCreateLoader is NOT called. I don't understand why this is, but
-        // in order to keep the popular or top rated loader from covering up the Favorite's list
-        // I have to first check the preference, and if it is Favorites, then I have onLoadFinished
-        // just skip all of the following steps. Is this a bug in onLoadFinished?
         if (!mPreference.equals(FAVORITES_KEY)) {
             // First clear MovieAdapter
             mMovieAdapter.setMovieData(null);
@@ -261,7 +272,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void setFavoritesListToUI() {
-        Log.d(LOG_TAG, "setfavoriteslisttoui called");
         // Query the favorite movies from the database
         List<Movie> favoriteMovies = getListOfFavoriteMovies();
 
@@ -279,7 +289,6 @@ public class MainActivity extends AppCompatActivity
     }
 
     private List<Movie> getListOfFavoriteMovies() {
-        Log.d(LOG_TAG, "getlistofavoritemovies called");
         // Check if device is connected to network first because we do not want
         // to load the list of favorite movies and then have the app crash when the user
         // tries to select a movie but cannot go on to the detail activity
@@ -288,13 +297,13 @@ public class MainActivity extends AppCompatActivity
             showEmptyTextView();
         }
 
-        mCursor = getContentResolver().query(
+        mCursor = new CursorLoader( this,
                 FavoritesContract.FavoritesEntry.CONTENT_URI,
                 null,
                 null,
                 null,
                 null
-        );
+        ).loadInBackground();
 
         // return null if cursor is null
         if (mCursor == null) {
@@ -321,7 +330,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
-        Log.d(LOG_TAG, "onstop called");
         super.onStop();
 
         if (mCursor != null) {
@@ -331,7 +339,6 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
-        Log.d(LOG_TAG, "onsaveinstancestate called");
         super.onSaveInstanceState(outState);
         outState.putParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT, mMoviesRecyclerView.getLayoutManager().
                 onSaveInstanceState());
@@ -339,13 +346,10 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        Log.d(LOG_TAG, "onrestoreinstancestate called");
         super.onRestoreInstanceState(savedInstanceState);
         if (savedInstanceState != null) {
-            Log.d(LOG_TAG, "saveinstance is not null");
             mLayoutManagerSavedState = savedInstanceState.getParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT);
             if (mLayoutManagerSavedState != null) {
-                Log.d(LOG_TAG, "layoutmanagersavedstate is not null");
                 mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(mLayoutManagerSavedState);
             }
 
