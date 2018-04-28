@@ -1,7 +1,6 @@
 package com.example.android.popularmovies;
 
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.DialogInterface;
 import android.support.v4.app.LoaderManager;
 import android.content.ContentValues;
@@ -16,6 +15,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.RatingBar;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -34,9 +34,9 @@ public class DetailActivity extends AppCompatActivity
     private static final String YOUTUBE_WEB_BASE = "https://www.youtube.com/watch?v=";
     private static final String YOUTUBE_APP_BASE = "vnd.youtube:";
 
-    private static boolean isAlreadyFavorite = false;
-
     private static String LOG_TAG = "DetailActivity.java";
+
+    private static final String SCROLL_POSITION_KEY = "scroll-position";
 
     private Cursor mCursor;
 
@@ -44,6 +44,8 @@ public class DetailActivity extends AppCompatActivity
 
     public static final String EXTRA_DATABASE_CHANGE_NAME = "databaseChange";
     public static final String EXTRA_DATABASE_CHANGE_VALUE = "databaseChange";
+
+    private Bundle mScrollPositionBundle;
 
     // Bind views to layout views
     @BindView(R.id.detail_movie_image_view)
@@ -58,6 +60,8 @@ public class DetailActivity extends AppCompatActivity
     TextView mNoTrailersFound;
     @BindView(R.id.no_reviews_found_text_view)
     TextView mNoReviewsFound;
+    @BindView(R.id.detail_scroll_view)
+    ScrollView mScrollView;
 
     private String mMovieDatabaseId;
     private DetailMovie mDetailMovie;
@@ -69,6 +73,7 @@ public class DetailActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
+        mScrollPositionBundle = savedInstanceState;
 
         // Bind views
         ButterKnife.bind(this);
@@ -92,12 +97,6 @@ public class DetailActivity extends AppCompatActivity
         loaderManager.restartLoader(DETAIL_LOADER_ID, null, this);
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        isAlreadyFavorite = false;
-    }
-
     private void closeOnError() {
         finish();
         Toast.makeText(this, R.string.error_message_detail, Toast.LENGTH_SHORT).show();
@@ -117,10 +116,8 @@ public class DetailActivity extends AppCompatActivity
         );
 
         if (mCursor.getCount() == 0) {
-            isAlreadyFavorite = false;
             showFavorite();
         } else {
-            isAlreadyFavorite = true;
             showUnfavorite();
         }
     }
@@ -226,7 +223,6 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<DetailMovie> loader, DetailMovie data) {
-        if (mUnfavoriteOption != null) {
             // Set the data to the mDetailMenu variable
             mDetailMovie = data;
 
@@ -329,6 +325,9 @@ public class DetailActivity extends AppCompatActivity
                     authorTextView.setText(authors[i]);
                 }
             }
+
+        if (mScrollPositionBundle != null) {
+            scrollBackToPosition(mScrollPositionBundle);
         }
     }
 
@@ -357,4 +356,25 @@ public class DetailActivity extends AppCompatActivity
         }
         super.onStop();
     }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putIntArray(SCROLL_POSITION_KEY, new int[]{mScrollView.getScrollX(),
+                mScrollView.getScrollY()});
+    }
+
+    public void scrollBackToPosition(Bundle savedInstanceState) {
+        final int[] position = savedInstanceState.getIntArray(SCROLL_POSITION_KEY);
+        if (position != null) {
+            mScrollView.post(new Runnable() {
+                @Override
+                public void run() {
+                    Log.d(LOG_TAG, "scroll to called. Xposition=" + position[0] + "yposition=" + position[1]);
+                    mScrollView.scrollTo(position[0], position[1]);
+                }
+            });
+        }
+    }
+
 }
