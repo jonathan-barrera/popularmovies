@@ -21,7 +21,7 @@ public class DetailNetworkUtils {
     private static final String API_KEY = BuildConfig.API_KEY;
 
     // Build URL based on the preference input
-    public static String buildUrl(String movieDatabaseId) {
+    private static String buildUrl(String movieDatabaseId) {
         // Build the URL
         HttpUrl.Builder urlBuilder = HttpUrl.parse(BASE_URL).newBuilder();
 

@@ -247,7 +247,6 @@ public class DetailActivity extends AppCompatActivity
 
         // Get the numbers of reviews
         int numReviews = data.getReviews().length;
-        Log.d("DetailActivity.java", "number of reviews: " + numReviews);
 
         // If there are no reviews, skip the following steps and leave the No Reviews Found
         // textview visible

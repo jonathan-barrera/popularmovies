@@ -3,6 +3,7 @@ package com.example.android.popularmovies;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Parcelable;
 import android.support.v4.app.LoaderManager;
 import android.content.Context;
 import android.content.Intent;
@@ -46,6 +47,11 @@ public class MainActivity extends AppCompatActivity
 
     private static final int POP_TOP_RATED_LOADER_ID = 123;
 
+    private static final String BUNDLE_RECYCLER_VIEW_LAYOUT = "mainactivity.recycler.layout";
+    private static Bundle mRecyclerViewState;
+
+    private static final String LOG_TAG = "MainActivity.java";
+
     // Declare member variables
     @BindView(R.id.recycler_view_movies)
     RecyclerView mMoviesRecyclerView;
@@ -64,6 +70,8 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        Log.d(LOG_TAG, "oncreate called");
 
         // Bind views
         ButterKnife.bind(this);
@@ -85,27 +93,18 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onResume() {
-        /** Must destroy the loader in order to show the Favorites list. I came up with
-        // this solution after many tries to fix the problem, but I do not understand
-        // know I must do this. Can the reviewer please give me some feedback? **/
-        LoaderManager loaderManager = getSupportLoaderManager();
-        loaderManager.destroyLoader(POP_TOP_RATED_LOADER_ID);
-
-        // Get a reference to the LoaderManager and initialize it
-        switch (mPreference) {
-            case FAVORITES_KEY:
-                setFavoritesListToUI();
-                break;
-            default:
-                loaderManager.initLoader(POP_TOP_RATED_LOADER_ID, null, this);
-        }
+        Log.d(LOG_TAG, "on resume called");
         super.onResume();
+
+        if (mRecyclerViewState != null) {
+            Parcelable listState = mRecyclerViewState.getParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT);
+            mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(listState);
+        }
     }
 
-    // Method for checking network connectivity. If there is a problem with the connect,
-    // set the empty text view to "No Internet Connection". If no problem with connect, set
-    // to "No Movies Downloaded"
+    // Method for checking network connectivity
     private void checkNetworkConnectivity() {
+        Log.d(LOG_TAG, "check newtork connectivity called");
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
@@ -126,6 +125,7 @@ public class MainActivity extends AppCompatActivity
     // When a movie image is clicked, take the user to the movie's detail page
     @Override
     public void onClick(Movie movie) {
+        Log.d(LOG_TAG, "on click called");
         // Send an intent to open the DetailActivity.class using the selected movie as a parameter
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID,
@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity
     // Create an options menu
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d(LOG_TAG, "on create options menu called");
         getMenuInflater().inflate(R.menu.main_menu, menu);
         MenuItem item = menu.findItem(R.id.settings_spinner);
         Spinner spinner = (Spinner) item.getActionView();
@@ -146,8 +147,6 @@ public class MainActivity extends AppCompatActivity
                 R.layout.support_simple_spinner_dropdown_item);
 
         spinner.setAdapter(adapter);
-
-        Log.d("MainActivity.java", "onCreateOptionsMenu mPreference:" + mPreference);
 
         switch (mPreference) {
             case TOP_RATED_PATH_KEY:
@@ -164,7 +163,7 @@ public class MainActivity extends AppCompatActivity
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l) {
-
+                Log.d(LOG_TAG, "on item selected called");
                 // Get the selected item
                 String selectedItem = adapterView.getItemAtPosition(position).toString();
 
@@ -191,6 +190,7 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void onNothingSelected(AdapterView<?> adapterView) {
+                Log.d(LOG_TAG, "on nothing selected called");
             }
         });
 
@@ -199,31 +199,38 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public android.support.v4.content.Loader<List<Movie>> onCreateLoader(int id, Bundle args) {
+        Log.d(LOG_TAG, "on create loader called");
         return new MovieLoader(this, mPreference);
     }
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<List<Movie>> loader, List<Movie> data) {
-        // First clear MovieAdapter
-        mMovieAdapter.setMovieData(null);
+        Log.d(LOG_TAG, "on load finished called");
+        if (!mPreference.equals(FAVORITES_KEY)) {
+            // First clear MovieAdapter
+            mMovieAdapter.setMovieData(null);
 
-        // Hide Progress Bar
-        mProgressBar.setVisibility(View.GONE);
+            // Hide Progress Bar
+            mProgressBar.setVisibility(View.GONE);
 
-        // Check if Data has been retrieved properly
-        if (data != null && data.size() > 0) {
-            mMovieAdapter.setMovieData(data);
-        } else {
-            checkNetworkConnectivity();
+            // Check if Data has been retrieved properly
+            if (data != null && data.size() > 0) {
+                mMovieAdapter.setMovieData(data);
+                mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(mRecyclerViewState);
+            } else {
+                checkNetworkConnectivity();
+            }
         }
     }
 
     @Override
     public void onLoaderReset(android.support.v4.content.Loader<List<Movie>> loader) {
+        Log.d(LOG_TAG, "on loader reset called");
         mMovieAdapter.setMovieData(null);
     }
 
     private void setFavoritesListToUI() {
+        Log.d(LOG_TAG, "set favorites list to ui called");
         // Query the favorite movies from the database
         List<Movie> favoriteMovies = getListOfFavoriteMovies();
 
@@ -235,6 +242,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private List<Movie> getListOfFavoriteMovies() {
+        Log.d(LOG_TAG, "getListOfFavoriteMovies() called");
         Cursor cursor = getContentResolver().query(
                 FavoritesContract.FavoritesEntry.CONTENT_URI,
                 null,
@@ -263,6 +271,19 @@ public class MainActivity extends AppCompatActivity
             favoriteMovies.add(currentMovie);
         }
 
+        // Close cursor.
+        cursor.close();
+
         return favoriteMovies;
+    }
+
+    @Override
+    protected void onStop() {
+        Log.d(LOG_TAG, "onstop called");
+        super.onStop();
+
+        mRecyclerViewState = new Bundle();
+        Parcelable recyclerState = mMoviesRecyclerView.getLayoutManager().onSaveInstanceState();
+        mRecyclerViewState.putParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT, recyclerState);
     }
 }
