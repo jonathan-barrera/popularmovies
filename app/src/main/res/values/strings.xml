@@ -17,6 +17,10 @@
     <string name="watch_trailer">Watch Trailer #</string>
     <string name="no_reviews_found">No Reviews Found</string>
     <string name="no_trailers_found">No Trailers Found</string>
+    <string name="no_favorite_movies">No favorite movies.</string>
+    <string name="delete_movies_prompt">Delete Movie From Favorites?</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
 
 </resources>
 

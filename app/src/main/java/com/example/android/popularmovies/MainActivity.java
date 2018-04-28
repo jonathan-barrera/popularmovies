@@ -1,8 +1,11 @@
 package com.example.android.popularmovies;
 
+import android.content.res.Configuration;
+import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.os.Handler;
 import android.os.Parcelable;
 import android.support.v4.app.LoaderManager;
 import android.content.Context;
@@ -50,6 +53,10 @@ public class MainActivity extends AppCompatActivity
     private static final String BUNDLE_RECYCLER_VIEW_LAYOUT = "mainactivity.recycler.layout";
     private static Bundle mRecyclerViewState;
 
+    private Cursor mCursor;
+
+    private boolean mIsConnected;
+
     private static final String LOG_TAG = "MainActivity.java";
 
     // Declare member variables
@@ -71,8 +78,6 @@ public class MainActivity extends AppCompatActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Log.d(LOG_TAG, "oncreate called");
-
         // Bind views
         ButterKnife.bind(this);
 
@@ -80,8 +85,17 @@ public class MainActivity extends AppCompatActivity
         mSharedPref = getSharedPreferences(SHARED_PREFERENCE_FILE, MODE_PRIVATE);
         mPreference = mSharedPref.getString(SHARED_PREFERENCE_KEY, POPULAR_PATH_KEY);
 
+        // Change the columns for the gridlayout depending on whether the phone is in Portrait
+        // mode or not.
+        int spanCount;
+        if(getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+            spanCount = 2;
+        } else {
+            spanCount = 4;
+        }
+
         // Create a grid layout manager and set to recycler view
-        GridLayoutManager layoutManager = new GridLayoutManager(this, 2,
+        GridLayoutManager layoutManager = new GridLayoutManager(this, spanCount,
                 GridLayoutManager.VERTICAL, false);
         mMoviesRecyclerView.setLayoutManager(layoutManager);
         mMoviesRecyclerView.setHasFixedSize(true);
@@ -92,8 +106,22 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        // Check to see if there were any changes in the Database and if the current preference
+        // is for favorite movies: if so, reload the favorite movies list, this time without the
+        // deleted favorite moive
+        if (data != null) {
+            if (data.hasExtra(DetailActivity.EXTRA_DATABASE_CHANGE_NAME) &&
+                    mPreference.equals(FAVORITES_KEY)) {
+                mMovieAdapter.setMovieData(null);
+                setFavoritesListToUI();
+            }
+        }
+    }
+
+    @Override
     protected void onResume() {
-        Log.d(LOG_TAG, "on resume called");
         super.onResume();
 
         if (mRecyclerViewState != null) {
@@ -104,40 +132,45 @@ public class MainActivity extends AppCompatActivity
 
     // Method for checking network connectivity
     private void checkNetworkConnectivity() {
-        Log.d(LOG_TAG, "check newtork connectivity called");
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
         NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
-        boolean isConnected = activeNetwork != null &&
+        mIsConnected = activeNetwork != null &&
                 activeNetwork.isConnectedOrConnecting();
+    }
 
-        // Hide RecyclerView and set the empty text view
+    private void showEmptyTextView() {
         mMoviesRecyclerView.setVisibility(View.GONE);
         mEmptyTextView.setVisibility(View.VISIBLE);
 
-        if (!isConnected) {
+        if (!mIsConnected) {
             mEmptyTextView.setText(R.string.no_internet_connection);
+        } else if (mPreference.equals(FAVORITES_KEY)) {
+            mEmptyTextView.setText(R.string.no_favorite_movies);
         } else {
             mEmptyTextView.setText(R.string.no_movies_loaded);
         }
     }
 
+    private void hideEmptyTextView() {
+        mMoviesRecyclerView.setVisibility(View.VISIBLE);
+        mEmptyTextView.setVisibility(View.GONE);
+    }
+
     // When a movie image is clicked, take the user to the movie's detail page
     @Override
     public void onClick(Movie movie) {
-        Log.d(LOG_TAG, "on click called");
         // Send an intent to open the DetailActivity.class using the selected movie as a parameter
         Intent intent = new Intent(this, DetailActivity.class);
         intent.putExtra(FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID,
                 movie.getMovieDatabaseID());
 
-        startActivity(intent);
+        startActivityForResult(intent, 123);
     }
 
     // Create an options menu
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.d(LOG_TAG, "on create options menu called");
         getMenuInflater().inflate(R.menu.main_menu, menu);
         MenuItem item = menu.findItem(R.id.settings_spinner);
         Spinner spinner = (Spinner) item.getActionView();
@@ -163,7 +196,6 @@ public class MainActivity extends AppCompatActivity
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> adapterView, View view, int position, long l) {
-                Log.d(LOG_TAG, "on item selected called");
                 // Get the selected item
                 String selectedItem = adapterView.getItemAtPosition(position).toString();
 
@@ -179,6 +211,8 @@ public class MainActivity extends AppCompatActivity
                     mMovieAdapter.setMovieData(null);
 
                     if (selectedItem.equals(getString(R.string.settings_order_by_favorites))) {
+                        hideEmptyTextView();
+                        mProgressBar.setVisibility(View.VISIBLE);
                         setFavoritesListToUI();
                     } else {
                         // Restart Loader
@@ -190,7 +224,6 @@ public class MainActivity extends AppCompatActivity
 
             @Override
             public void onNothingSelected(AdapterView<?> adapterView) {
-                Log.d(LOG_TAG, "on nothing selected called");
             }
         });
 
@@ -199,13 +232,18 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public android.support.v4.content.Loader<List<Movie>> onCreateLoader(int id, Bundle args) {
-        Log.d(LOG_TAG, "on create loader called");
+        hideEmptyTextView();
+        mProgressBar.setVisibility(View.VISIBLE);
         return new MovieLoader(this, mPreference);
     }
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<List<Movie>> loader, List<Movie> data) {
-        Log.d(LOG_TAG, "on load finished called");
+        // For some reason, onLoadFinished is called AGAIN after onResume when returning to this
+        // activity, even though onCreateLoader is NOT called. I don't understand why this is, but
+        // in order to keep the popular or top rated loader from covering up the Favorite's list
+        // I have to first check the preference, and if it is Favorites, then I have onLoadFinished
+        // just skip all of the following steps. Is this a bug in onLoadFinished?
         if (!mPreference.equals(FAVORITES_KEY)) {
             // First clear MovieAdapter
             mMovieAdapter.setMovieData(null);
@@ -216,34 +254,45 @@ public class MainActivity extends AppCompatActivity
             // Check if Data has been retrieved properly
             if (data != null && data.size() > 0) {
                 mMovieAdapter.setMovieData(data);
-                mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(mRecyclerViewState);
             } else {
                 checkNetworkConnectivity();
+                showEmptyTextView();
             }
         }
     }
 
     @Override
     public void onLoaderReset(android.support.v4.content.Loader<List<Movie>> loader) {
-        Log.d(LOG_TAG, "on loader reset called");
         mMovieAdapter.setMovieData(null);
     }
 
     private void setFavoritesListToUI() {
-        Log.d(LOG_TAG, "set favorites list to ui called");
         // Query the favorite movies from the database
         List<Movie> favoriteMovies = getListOfFavoriteMovies();
 
-        // Set the loading indicator to gone
-        mProgressBar.setVisibility(View.GONE);
+        if (favoriteMovies == null || favoriteMovies.size() == 0) {
+            checkNetworkConnectivity();
+            mProgressBar.setVisibility(View.GONE);
+            showEmptyTextView();
+        } else {
+            // Set the loading indicator to gone
+            mProgressBar.setVisibility(View.GONE);
 
-        // Use the information from the database to populate the UI
-        mMovieAdapter.setMovieData(favoriteMovies);
+            // Use the information from the database to populate the UI
+            mMovieAdapter.setMovieData(favoriteMovies);
+        }
     }
 
     private List<Movie> getListOfFavoriteMovies() {
-        Log.d(LOG_TAG, "getListOfFavoriteMovies() called");
-        Cursor cursor = getContentResolver().query(
+        // Check if device is connected to network first because we do not want
+        // to load the list of favorite movies and then have the app crash when the user
+        // tries to select a movie but cannot go on to the detail activity
+        checkNetworkConnectivity();
+        if (!mIsConnected) {
+            showEmptyTextView();
+        }
+
+        mCursor = getContentResolver().query(
                 FavoritesContract.FavoritesEntry.CONTENT_URI,
                 null,
                 null,
@@ -252,7 +301,7 @@ public class MainActivity extends AppCompatActivity
         );
 
         // return null if cursor is null
-        if (cursor == null) {
+        if (mCursor == null) {
             return null;
         }
 
@@ -261,26 +310,26 @@ public class MainActivity extends AppCompatActivity
 
         // Iterate through cursor to get the information to make Movie objects to put into the
         // the list
-        for (cursor.moveToFirst(); !cursor.isAfterLast(); cursor.moveToNext()) {
-            String movieDatabaseId = cursor.getString(cursor.getColumnIndex(
+        for (mCursor.moveToFirst(); !mCursor.isAfterLast(); mCursor.moveToNext()) {
+            String movieDatabaseId = mCursor.getString(mCursor.getColumnIndex(
                     FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID));
-            String posterLink = cursor.getString(cursor.getColumnIndex(
+            String posterLink = mCursor.getString(mCursor.getColumnIndex(
                     FavoritesContract.FavoritesEntry.COLUMN_POSTER_LINK));
 
             Movie currentMovie = new Movie(movieDatabaseId, posterLink);
             favoriteMovies.add(currentMovie);
         }
 
-        // Close cursor.
-        cursor.close();
-
         return favoriteMovies;
     }
 
     @Override
     protected void onStop() {
-        Log.d(LOG_TAG, "onstop called");
         super.onStop();
+
+        if (mCursor != null) {
+            mCursor.close();
+        }
 
         mRecyclerViewState = new Bundle();
         Parcelable recyclerState = mMoviesRecyclerView.getLayoutManager().onSaveInstanceState();

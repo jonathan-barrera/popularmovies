@@ -1,6 +1,8 @@
 package com.example.android.popularmovies;
 
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.DialogInterface;
 import android.support.v4.app.LoaderManager;
 import android.content.ContentValues;
 import android.content.Intent;
@@ -34,7 +36,14 @@ public class DetailActivity extends AppCompatActivity
 
     private static boolean isAlreadyFavorite = false;
 
+    private static String LOG_TAG = "DetailActivity.java";
+
     private Cursor mCursor;
+
+    private static final int INTENT_RESULT_CODE = 123;
+
+    public static final String EXTRA_DATABASE_CHANGE_NAME = "databaseChange";
+    public static final String EXTRA_DATABASE_CHANGE_VALUE = "databaseChange";
 
     // Bind views to layout views
     @BindView(R.id.detail_movie_image_view)
@@ -58,6 +67,7 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(LOG_TAG, "Oncreate called");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
@@ -80,7 +90,14 @@ public class DetailActivity extends AppCompatActivity
         }
 
         LoaderManager loaderManager = getSupportLoaderManager();
-        loaderManager.initLoader(DETAIL_LOADER_ID, null, this);
+        loaderManager.restartLoader(DETAIL_LOADER_ID, null, this);
+    }
+
+    @Override
+    protected void onResume() {
+        Log.d(LOG_TAG, "on resume called");
+        super.onResume();
+        isAlreadyFavorite = false;
     }
 
     private void closeOnError() {
@@ -89,6 +106,7 @@ public class DetailActivity extends AppCompatActivity
     }
 
     private void checkFavoriteStatus() {
+        Log.d(LOG_TAG, "check fav status called");
 
         String[] projection = new String[]{FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID};
         String selection = FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID;
@@ -104,21 +122,20 @@ public class DetailActivity extends AppCompatActivity
 
         if (mCursor.getCount() == 0) {
             isAlreadyFavorite = false;
+            showFavorite();
         } else {
             isAlreadyFavorite = true;
+            showUnfavorite();
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        Log.d(LOG_TAG, "oncreateoptionsmenu called");
         // Create options menu to have the Favorite action appear
         getMenuInflater().inflate(R.menu.detail_menu, menu);
         mFavoriteOption = menu.findItem(R.id.favorite_option);
         mUnfavoriteOption = menu.findItem(R.id.unfavorite_option);
-
-        if (isAlreadyFavorite) {
-            showUnfavorite();
-        }
         return true;
     }
 
@@ -134,9 +151,8 @@ public class DetailActivity extends AppCompatActivity
         }
 
         if (id == R.id.unfavorite_option) {
-            // Delete the current movie from the favorites database
-            deleteFromDatabase();
-            showFavorite();
+            // Show delete confirmation dialog
+            showDeleteConfirmDialog();
             return true;
         }
 
@@ -158,6 +174,35 @@ public class DetailActivity extends AppCompatActivity
         getContentResolver().insert(FavoritesContract.FavoritesEntry.CONTENT_URI, movieValues);
     }
 
+    private void showDeleteConfirmDialog() {
+        // Have user confirm that he/she wants to delete movie from favorites
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(R.string.delete_movies_prompt);
+        builder.setPositiveButton(R.string.delete, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // delete from database
+                deleteFromDatabase();
+                // Send an intent back to the main activity with an string extra signaling
+                // that there has been a change in the database
+                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                intent.putExtra(EXTRA_DATABASE_CHANGE_NAME, EXTRA_DATABASE_CHANGE_VALUE);
+                setResult(INTENT_RESULT_CODE, intent);
+                finish();
+            }
+        });
+        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                if (dialog != null) {
+                    dialog.dismiss();
+                }
+            }
+        });
+
+        // Create and show the AlertDialog
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
     private void deleteFromDatabase() {
         // Delete the current movie from the favorites database
         Uri uri = FavoritesContract.FavoritesEntry.CONTENT_URI;
@@ -165,129 +210,135 @@ public class DetailActivity extends AppCompatActivity
         String[] selectionArgs = new String[]{mDetailMovie.getMovieDatabaseID()};
 
         getContentResolver().delete(uri, selection, selectionArgs);
+
+        showFavorite();
     }
 
     private void showFavorite() {
+        Log.d(LOG_TAG, "showfavorite called");
         mFavoriteOption.setVisible(true);
         mUnfavoriteOption.setVisible(false);
     }
 
     private void showUnfavorite() {
+        Log.d(LOG_TAG, "showunfavorite called");
         mUnfavoriteOption.setVisible(true);
         mFavoriteOption.setVisible(false);
     }
 
     @Override
     public android.support.v4.content.Loader<DetailMovie> onCreateLoader(int id, Bundle args) {
+        Log.d(LOG_TAG, "oncreateloader called");
         return new DetailMovieLoader(this, mMovieDatabaseId);
     }
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<DetailMovie> loader, DetailMovie data) {
-        // Set the data to the mDetailMenu variable
-        mDetailMovie = data;
+        Log.d(LOG_TAG, "onloadfinished called");
 
-        // Set the title
-        setTitle(data.getMovieTitle());
-
-        // Set the movie data to the views in the DetailActivity
-        Picasso.with(this)
-                .load(BASE_URL + data.getBackdropLink())
-                .into(mDetailImageView);
-        mDetailRatingBar.setRating(data.getRating());
-        mDetailReleaseDateView.setText(data.getReleaseDate());
-        mDetailSynopsisView.setText(data.getSynopsis());
-
-        // Get the number of trailers and the links
-        String[] trailerLinks = data.getTrailerLinks();
-        int numTrailers = trailerLinks.length;
-
-        // If there are no trailers, skip the following steps and leave the No Trailers Found
-        // textview visible.
-        if (numTrailers > 0) {
-            // Set the No Trailers Found view to GONE
-            mNoTrailersFound.setVisibility(View.GONE);
-            // Create a list of resource ids referencing the layouts and textviews
-            int[] trailerViewResourceIds = new int[]{
-                    R.id.detail_trailer_number_one,
-                    R.id.trailer_index_text_view_one,
-                    R.id.detail_trailer_number_two,
-                    R.id.trailer_index_text_view_two,
-                    R.id.detail_trailer_number_three,
-                    R.id.trailer_index_text_view_three};
-
-            // Populate the views with the trailer information. Only up to a maximum of 3 trailers.
-            for (int i = 0; i < 3 && i < numTrailers; i++) {
-                // Get references to the views
-                View view = findViewById(trailerViewResourceIds[2 * i]);
-                TextView textView = findViewById(trailerViewResourceIds[2 * i + 1]);
-
-                // Get the trailer count text
-                String trailerCount = getString(R.string.watch_trailer) + (i + 1);
-
-                // Set the view to visible
-                view.setVisibility(View.VISIBLE);
-
-                // Set the trailer count text to the textview
-                textView.setText(trailerCount);
-
-                // Set the Youtube link information to the view in a tag
-                view.setTag(trailerLinks[i]);
-
-                // Set on click listener to the textview in order to send intent
-                // to take user to watch the trailer
-                view.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        openYoutubeIntent(view);
-                    }
-                });
-            }
-        }
-
-        // Get the numbers of reviews
-        int numReviews = data.getReviews().length;
-
-        // If there are no reviews, skip the following steps and leave the No Reviews Found
-        // textview visible
-        if (numReviews > 0) {
-            // Get the Array of Strings for the review content and authors
-            String[] reviews = data.getReviews();
-            String[] authors = data.getReviewAuthors();
-            // Set the No Reviews Found view to GONE
-            mNoReviewsFound.setVisibility(View.GONE);
-            // Create a list of resource ids referencing the layouts and textviews
-            int[] reviewsViewResourceIds = new int[]{
-                    R.id.detail_review_one,
-                    R.id.review_content_text_view_one,
-                    R.id.review_author_text_view_one,
-                    R.id.detail_review_two,
-                    R.id.review_content_text_view_two,
-                    R.id.review_author_text_view_two,
-                    R.id.detail_review_three,
-                    R.id.review_content_text_view_three,
-                    R.id.review_author_text_view_three};
-
-            // Populate the views with the review information. Only up to a maximum of 3 reviews.
-            for (int i = 0; i < 3 && i < numReviews; i++) {
-                // Get references to the views
-                View view = findViewById(reviewsViewResourceIds[3 * i]);
-                TextView contentTextView = findViewById(reviewsViewResourceIds[3 * i + 1]);
-                TextView authorTextView = findViewById(reviewsViewResourceIds[3 * i + 2]);
-
-                // Set the view to visible
-                view.setVisibility(View.VISIBLE);
-
-                // Set the review content to the textview
-                contentTextView.setText(reviews[i]);
-                authorTextView.setText(authors[i]);
-            }
+        if (mUnfavoriteOption != null) {
+            // Set the data to the mDetailMenu variable
+            mDetailMovie = data;
 
             // Check to see if the current movie is already included in the user's favorites
             checkFavoriteStatus();
 
-            // Rebuild the optionsMenu to makes sure the correct Favorite/Unfavorite action is showing
-            invalidateOptionsMenu();
+            // Set the title
+            setTitle(data.getMovieTitle());
+
+            // Set the movie data to the views in the DetailActivity
+            Picasso.with(this)
+                    .load(BASE_URL + data.getBackdropLink())
+                    .into(mDetailImageView);
+            mDetailRatingBar.setRating(data.getRating());
+            mDetailReleaseDateView.setText(data.getReleaseDate());
+            mDetailSynopsisView.setText(data.getSynopsis());
+
+            // Get the number of trailers and the links
+            String[] trailerLinks = data.getTrailerLinks();
+            int numTrailers = trailerLinks.length;
+
+            // If there are no trailers, skip the following steps and leave the No Trailers Found
+            // textview visible.
+            if (numTrailers > 0) {
+                // Set the No Trailers Found view to GONE
+                mNoTrailersFound.setVisibility(View.GONE);
+                // Create a list of resource ids referencing the layouts and textviews
+                int[] trailerViewResourceIds = new int[]{
+                        R.id.detail_trailer_number_one,
+                        R.id.trailer_index_text_view_one,
+                        R.id.detail_trailer_number_two,
+                        R.id.trailer_index_text_view_two,
+                        R.id.detail_trailer_number_three,
+                        R.id.trailer_index_text_view_three};
+
+                // Populate the views with the trailer information. Only up to a maximum of 3 trailers.
+                for (int i = 0; i < 3 && i < numTrailers; i++) {
+                    // Get references to the views
+                    View view = findViewById(trailerViewResourceIds[2 * i]);
+                    TextView textView = findViewById(trailerViewResourceIds[2 * i + 1]);
+
+                    // Get the trailer count text
+                    String trailerCount = getString(R.string.watch_trailer) + (i + 1);
+
+                    // Set the view to visible
+                    view.setVisibility(View.VISIBLE);
+
+                    // Set the trailer count text to the textview
+                    textView.setText(trailerCount);
+
+                    // Set the Youtube link information to the view in a tag
+                    view.setTag(trailerLinks[i]);
+
+                    // Set on click listener to the textview in order to send intent
+                    // to take user to watch the trailer
+                    view.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            openYoutubeIntent(view);
+                        }
+                    });
+                }
+            }
+
+            // Get the numbers of reviews
+            int numReviews = data.getReviews().length;
+
+            // If there are no reviews, skip the following steps and leave the No Reviews Found
+            // textview visible
+            if (numReviews > 0) {
+                // Get the Array of Strings for the review content and authors
+                String[] reviews = data.getReviews();
+                String[] authors = data.getReviewAuthors();
+                // Set the No Reviews Found view to GONE
+                mNoReviewsFound.setVisibility(View.GONE);
+                // Create a list of resource ids referencing the layouts and textviews
+                int[] reviewsViewResourceIds = new int[]{
+                        R.id.detail_review_one,
+                        R.id.review_content_text_view_one,
+                        R.id.review_author_text_view_one,
+                        R.id.detail_review_two,
+                        R.id.review_content_text_view_two,
+                        R.id.review_author_text_view_two,
+                        R.id.detail_review_three,
+                        R.id.review_content_text_view_three,
+                        R.id.review_author_text_view_three};
+
+                // Populate the views with the review information. Only up to a maximum of 3 reviews.
+                for (int i = 0; i < 3 && i < numReviews; i++) {
+                    // Get references to the views
+                    View view = findViewById(reviewsViewResourceIds[3 * i]);
+                    TextView contentTextView = findViewById(reviewsViewResourceIds[3 * i + 1]);
+                    TextView authorTextView = findViewById(reviewsViewResourceIds[3 * i + 2]);
+
+                    // Set the view to visible
+                    view.setVisibility(View.VISIBLE);
+
+                    // Set the review content to the textview
+                    contentTextView.setText(reviews[i]);
+                    authorTextView.setText(authors[i]);
+                }
+            }
         }
     }
 
@@ -310,6 +361,7 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
+        Log.d(LOG_TAG, "onstop called");
         if (mCursor != null) {
             mCursor.close();
         }
