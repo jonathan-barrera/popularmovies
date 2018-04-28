@@ -67,7 +67,6 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        Log.d(LOG_TAG, "Oncreate called");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
@@ -95,7 +94,6 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     protected void onResume() {
-        Log.d(LOG_TAG, "on resume called");
         super.onResume();
         isAlreadyFavorite = false;
     }
@@ -106,8 +104,6 @@ public class DetailActivity extends AppCompatActivity
     }
 
     private void checkFavoriteStatus() {
-        Log.d(LOG_TAG, "check fav status called");
-
         String[] projection = new String[]{FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID};
         String selection = FavoritesContract.FavoritesEntry.COLUMN_MOVIE_DATABASE_ID;
         String[] selectionArgs = new String[]{mDetailMovie.getMovieDatabaseID()};
@@ -131,7 +127,6 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        Log.d(LOG_TAG, "oncreateoptionsmenu called");
         // Create options menu to have the Favorite action appear
         getMenuInflater().inflate(R.menu.detail_menu, menu);
         mFavoriteOption = menu.findItem(R.id.favorite_option);
@@ -215,27 +210,22 @@ public class DetailActivity extends AppCompatActivity
     }
 
     private void showFavorite() {
-        Log.d(LOG_TAG, "showfavorite called");
         mFavoriteOption.setVisible(true);
         mUnfavoriteOption.setVisible(false);
     }
 
     private void showUnfavorite() {
-        Log.d(LOG_TAG, "showunfavorite called");
         mUnfavoriteOption.setVisible(true);
         mFavoriteOption.setVisible(false);
     }
 
     @Override
     public android.support.v4.content.Loader<DetailMovie> onCreateLoader(int id, Bundle args) {
-        Log.d(LOG_TAG, "oncreateloader called");
         return new DetailMovieLoader(this, mMovieDatabaseId);
     }
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<DetailMovie> loader, DetailMovie data) {
-        Log.d(LOG_TAG, "onloadfinished called");
-
         if (mUnfavoriteOption != null) {
             // Set the data to the mDetailMenu variable
             mDetailMovie = data;
@@ -361,7 +351,6 @@ public class DetailActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
-        Log.d(LOG_TAG, "onstop called");
         if (mCursor != null) {
             mCursor.close();
         }

@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity
     private static final int POP_TOP_RATED_LOADER_ID = 123;
 
     private static final String BUNDLE_RECYCLER_VIEW_LAYOUT = "mainactivity.recycler.layout";
-    private static Bundle mRecyclerViewState;
+    private static Parcelable mLayoutManagerSavedState;
 
     private Cursor mCursor;
 
@@ -75,6 +75,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        Log.d(LOG_TAG, "oncreate called");
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -117,16 +118,6 @@ public class MainActivity extends AppCompatActivity
                 mMovieAdapter.setMovieData(null);
                 setFavoritesListToUI();
             }
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (mRecyclerViewState != null) {
-            Parcelable listState = mRecyclerViewState.getParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT);
-            mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(listState);
         }
     }
 
@@ -239,6 +230,7 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     public void onLoadFinished(android.support.v4.content.Loader<List<Movie>> loader, List<Movie> data) {
+        Log.d(LOG_TAG, "onloadfinished called");
         // For some reason, onLoadFinished is called AGAIN after onResume when returning to this
         // activity, even though onCreateLoader is NOT called. I don't understand why this is, but
         // in order to keep the popular or top rated loader from covering up the Favorite's list
@@ -259,6 +251,8 @@ public class MainActivity extends AppCompatActivity
                 showEmptyTextView();
             }
         }
+
+        mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(mLayoutManagerSavedState);
     }
 
     @Override
@@ -267,6 +261,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void setFavoritesListToUI() {
+        Log.d(LOG_TAG, "setfavoriteslisttoui called");
         // Query the favorite movies from the database
         List<Movie> favoriteMovies = getListOfFavoriteMovies();
 
@@ -284,6 +279,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private List<Movie> getListOfFavoriteMovies() {
+        Log.d(LOG_TAG, "getlistofavoritemovies called");
         // Check if device is connected to network first because we do not want
         // to load the list of favorite movies and then have the app crash when the user
         // tries to select a movie but cannot go on to the detail activity
@@ -325,14 +321,34 @@ public class MainActivity extends AppCompatActivity
 
     @Override
     protected void onStop() {
+        Log.d(LOG_TAG, "onstop called");
         super.onStop();
 
         if (mCursor != null) {
             mCursor.close();
         }
+    }
 
-        mRecyclerViewState = new Bundle();
-        Parcelable recyclerState = mMoviesRecyclerView.getLayoutManager().onSaveInstanceState();
-        mRecyclerViewState.putParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT, recyclerState);
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        Log.d(LOG_TAG, "onsaveinstancestate called");
+        super.onSaveInstanceState(outState);
+        outState.putParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT, mMoviesRecyclerView.getLayoutManager().
+                onSaveInstanceState());
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        Log.d(LOG_TAG, "onrestoreinstancestate called");
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState != null) {
+            Log.d(LOG_TAG, "saveinstance is not null");
+            mLayoutManagerSavedState = savedInstanceState.getParcelable(BUNDLE_RECYCLER_VIEW_LAYOUT);
+            if (mLayoutManagerSavedState != null) {
+                Log.d(LOG_TAG, "layoutmanagersavedstate is not null");
+                mMoviesRecyclerView.getLayoutManager().onRestoreInstanceState(mLayoutManagerSavedState);
+            }
+
+        }
     }
 }
